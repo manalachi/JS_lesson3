@@ -103,6 +103,52 @@ window.addEventListener('DOMContentLoaded', function() {
 
     // Form
 
+//     let message = {
+//         loading: 'Загрузка...',
+//         succes: 'Спасибо! Скоро мы с вами свяжемся!',
+//         failure: 'Что-то пошло не так...'
+//     };
+
+//     let form = document.querySelector('.main-form'),
+//         input = form.getElementsByTagName('input'),
+//         statusMessage = document.createElement('div');
+
+//         statusMessage.classList.add('status');
+
+//     form.addEventListener('submit', function(e) {
+//         e.preventDefault();
+//         form.appendChild(statusMessage);
+
+//         let request = new XMLHttpRequest();
+//         request.open('POST', 'server.php');
+//         request.setRequestHeader('Content-type', 'application/json; charset=utf-8');
+
+//         let formData = new FormData(form);
+
+//         let obj = {};
+//         formData.forEach(function(value, key) {
+//             obj[key] = value;
+//         });
+//         let json = JSON.stringify(obj);
+
+//         request.send(json);
+
+//         request.addEventListener('readystatechange', function() {
+//             if (request.readyState < 4) {
+//                 statusMessage.innerHTML = message.loading;
+//             } else if (request.readyState === 4 && request.status == 200){
+//                 statusMessage.innerHTML = message.succes;
+//             }else {
+//                 statusMessage.innerHTML = message.failure;
+//             }
+//         });
+
+//             for (let i = 0; i < input.length; i++) {
+//                 input[i].value = '';
+//             }
+//     });
+// });
+
     let message = {
         loading: 'Загрузка...',
         succes: 'Спасибо! Скоро мы с вами свяжемся!',
@@ -111,40 +157,160 @@ window.addEventListener('DOMContentLoaded', function() {
 
     let form = document.querySelector('.main-form'),
         input = form.getElementsByTagName('input'),
+        formBottom = document.getElementById('form'),
         statusMessage = document.createElement('div');
 
         statusMessage.classList.add('status');
 
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        form.appendChild(statusMessage);
+    function sendForm(elem) {
+        elem.addEventListener('submit', function(e) {
+            e.preventDefault();
+                elem.appendChild(statusMessage);
+                let formData = new FormData(elem);              
+                                
+            function formPromise(data) {
+                return new Promise(function(resolve, reject) {
+                    let request = new XMLHttpRequest();
+                    request.open('POST', 'server.php');                  
+                    request.setRequestHeader('Content-type', 'application/json; charset=utf-8');
+                    
+                    request.onreadystatechange = function() {
+                        if (request.readyState < 4) {
+                            resolve()
+                        } else if (request.readyState === 4) {
+                            if (request.status == 200 && request.status < 300){
+                                let obj = {};
+                                formData.forEach(function(value, key) {
+                                    obj[key] = value;
+                                })
+                                    let json = JSON.stringify(obj); 
+                                    request.send(json);                
+                                resolve();
+                            }
+                            else {
+                                reject()
+                            }
+                        }                         
+                    }
+                    request.send(data);                                        
+                })                          
+            }//end formPromise            
 
-        let request = new XMLHttpRequest();
-        request.open('POST', 'server.php');
-        request.setRequestHeader('Content-type', 'application/json; charset=utf-8');
-
-        let formData = new FormData(form);
-
-        let obj = {};
-        formData.forEach(function(value, key) {
-            obj[key] = value;
+            function clearInput() {
+                for (let i = 0; i < input.length; i++) {
+                    input[i].value = '';
+                }
+            }
+            formPromise(formData)
+                .then(() => statusMessage.innerHTML = message.loading)
+                .then(() => statusMessage.innerHTML = message.succes) 
+                .catch(() => statusMessage.innerHTML = message.failure)
+                .then(clearInput)
         });
-        let json = JSON.stringify(obj);
+    }
+    sendForm(form);
+    sendForm(formBottom);
 
-        request.send(json);
+    // Slider
 
-        request.addEventListener('readystatechange', function() {
-            if (request.readyState < 4) {
-                statusMessage.innerHTML = message.loading;
-            } else if (request.readyState === 4 && request.status == 200){
-                statusMessage.innerHTML = message.succes;
-            }else {
-                statusMessage.innerHTML = message.failure;
+    let sliderIndex = 1,
+        sliders = document.querySelectorAll('.slider-item'),
+        prev = document.querySelector('.prev'),
+        next = document.querySelector('.next'),
+        dotsWrap = document.querySelector('.slider-dots'),
+        dots = document.querySelectorAll('.dot');
+
+    showSliders(sliderIndex);
+
+    function showSliders(n) {
+
+        if (n > sliders.length) {
+            sliderIndex = 1;
+        }
+        if (n < 1) {
+            sliderIndex = sliders.length;
+        }
+
+        sliders.forEach((item) => item.style.display = 'none');
+        // for (let i = 0; i < slides.length; i++) {
+        //     slides[i].style.display = none;
+        // }
+        dots.forEach((item) => item.classList.remove('dot-active'));
+
+        sliders[sliderIndex - 1].style.display = 'block';
+        dots[sliderIndex - 1].classList.add('dot-active');
+    } 
+
+    function plusSliders(n) {
+        showSliders(sliderIndex += n);
+    }
+    function currentSlider(n) {
+        showSliders(sliderIndex = n);
+    }
+
+    prev.addEventListener('click', function() {
+        plusSliders(-1);
+    });
+    next.addEventListener('click', function() {
+        plusSliders(1);
+    });
+
+    dotsWrap.addEventListener('click', function(e) {
+        for (let i = 0; i < dots.length + 1; i++) {
+            if (e.target.classList.contains('dot') && e.target == dots[i-1]) {
+                currentSlider(i);
+            }
+        }
+    });
+
+    //Calc
+
+    let persons = document.querySelectorAll('.counter-block-input')[0],
+        restDays = document.querySelectorAll('.counter-block-input')[1],
+        place = document.getElementById('select'),
+        totalValue = document.getElementById('total'),
+        personsSum = 0,
+        daysSum = 0,
+        total = 0;
+
+        totalValue.innerHTML = 0;
+
+        persons.addEventListener('change', function() {
+            personsSum = +this.value;
+            total = (daysSum + personsSum) * 4000;
+
+            if (restDays.value == '') {
+                totalValue.innerHTML = 0;
+            } else {
+                totalValue.innerHTML = zeroTotal();
             }
         });
+        restDays.addEventListener('change', function() {
+            daysSum = +this.value;
+            total = (daysSum + personsSum) * 4000;
 
+            if (persons.value == '') {
+                totalValue.innerHTML = 0;
+            } else {
+                totalValue.innerHTML = zeroTotal();
+            }
+        });
+        function zeroTotal() {
+            if (restDays.value == '' || persons.value == '') {
+                return (totalValue.innerHTML = 0);
+            } else {
+                return (totalValue.innerHTML = total);
+            }
+        }
+        place.addEventListener('change', function() {
+            if (restDays.value == '' || persons.value == '') {
+                totalValue.innerHTML = 0;
+            } else {
+                let a = total;
+                totalValue.innerHTML = a * this.options[this.selectedIndex].value;
+            }
             for (let i = 0; i < input.length; i++) {
                 input[i].value = '';
             }
-    });
+        });    
 });
